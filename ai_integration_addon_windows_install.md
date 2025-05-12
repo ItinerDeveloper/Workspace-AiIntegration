@@ -1,6 +1,6 @@
-# Itiner Workspace Invoice Data Extraction Addon Installation Guide for Windows Server
+# Itiner Workspace AI Integration Addon Installation Guide for Windows Server
 
-This document outlines the installation and configuration process for the **Invoice Data Extraction Addon** for the Itiner Workspace platform, specifically for deployments on **Windows Server operating systems**.
+This document outlines the installation and configuration process for the **AI Integration Addon** for the Itiner Workspace platform, specifically for deployments on **Windows Server operating systems**.
 
 ---
 
@@ -13,31 +13,54 @@ This document outlines the installation and configuration process for the **Invo
 - Installed Itiner Workspace application
 
 ### 1.2 File System
-Unpack the Invoice Data Extraction Addon package to your preferred location, for example:
+Unpack the AI Integration Addon package to your preferred location, for example:
 ```
-D:\ItinerWorkspace\InvoiceDataExtractionAddon\
+D:\ItinerWorkspace\AIIntegrationAddon\
 ```
 
-### 1.3 Azure AI OCR Service Configuration
+### 1.3 Azure AI Service Configuration
 
-This addon uses **Azure Cognitive Services** for OCR (Optical Character Recognition), specifically configured for recognizing and extracting data from invoice documents.
+The AI Integration Addon requires two Azure AI resources:
+- **Azure OpenAI** – for Language Model (LLM) operations like prompt completion.
+- **Azure Cognitive Services** – for OCR operations via Form Recognizer.
 
-#### Steps to Configure Azure Cognitive Services:
+#### 1.3.1 Creating an Azure OpenAI Resource (LLM)
 
-1. Log in to the [Azure Portal](https://portal.azure.com/).
-2. Search for **Cognitive Services** and click **+ Create**.
+1. **Log in** to the [Azure Portal](https://portal.azure.com/).
+2. In the top search bar, type and select **Azure AI Services**.
+3. Click **+ Create**.
 
 **Basic Setup**:
-- **Subscription**: Select your Azure subscription.
-- **Resource Group**: Create a new one or reuse an existing group.
-- **Region**: Select a region that supports **Form Recognizer** (e.g., *East US 2*, *West Europe*).
-- **Name**: Assign a name (e.g., `invoice-ocr-service`).
-- **Pricing Tier**: Use **Standard S0** or Free F0 tier if available.
+- **Subscription**: Choose your Azure subscription.
+- **Resource group**: Create a new one or select an existing one.
+- **Region**: Select a supported region (e.g., *East US 2*, *West Europe*).
+- **Name**: Provide a unique name (e.g., `workspace-openai`).
+- **Pricing Tier**: Choose based on usage; standard is sufficient for most.
 
-3. Click **Review + Create** and then **Create**.
+4. Click **Next** through the tabs, review the details, and click **Create**.
 
 After deployment:
-- Navigate to the resource overview page.
+- Go to the resource overview page.
+- Copy:
+  - **Endpoint** → Use as `AZURE_OPENAI_ENDPOINT`
+  - **Key1** or **Key2** from "Keys and Endpoint" → Use as `AZURE_OPENAI_API_KEY`
+
+#### 1.3.2 Creating a Cognitive Services Resource (OCR)
+
+1. In the Azure Portal, search for **Azure AI Services**.
+2. Click **+ Create**.
+
+**Basic Setup**:
+- **Subscription**: Select your subscription.
+- **Resource group**: Use the same one as the OpenAI service if desired.
+- **Region**: Must support **Form Recognizer** (e.g., *East US 2*, *West Europe*).
+- **Name**: Choose a unique name (e.g., `workspace-ocr`).
+- **Pricing Tier**: Choose **Standard S0** or the free tier for testing.
+
+3. Click **Next** to review and **Create** the resource.
+
+After deployment:
+- Go to the resource overview.
 - Copy:
   - **Endpoint** → Use as `AZURE_COGNITIVE_ENDPOINT`
   - **Key1** or **Key2** → Use as `AZURE_API_KEY`
@@ -51,33 +74,48 @@ After deployment:
 Create or edit the `.env` file in the addon directory with the following structure:
 
 ```env
-AZURE_COGNITIVE_ENDPOINT=...  # Azure OCR endpoint
-AZURE_API_KEY=...  # Azure OCR API key
+# Azure OpenAI configuration (LLM)
+AZURE_OPENAI_API_KEY=...  # Azure API key for OpenAI (LLM) service
+AZURE_OPENAI_ENDPOINT=...  # Endpoint of the Azure OpenAI (LLM) resource
 
+# Azure Cognitive Services configuration (OCR)
+AZURE_COGNITIVE_ENDPOINT=...  # Endpoint for Azure AI OCR (Form Recognizer)
+AZURE_API_KEY=...  # API key for Azure AI OCR Services
+
+# Workspace integration configuration
 WS_URL=https://companydomain.com/workspace/api/integration/variables  # Workspace integration endpoint
 WS_API_KEY=...  # API key for Workspace authentication
 WS_HEALTHCHECK_URL=http://addonhostdnsname:8000/workspace/idrecognizer/healthcheck  # Health check URL
 
-HMAC_SECRET=...  # HMAC secret for validating signed requests
-X-CUSTOM-APIKEY=...  # Custom API header for authentication
+# Security and routing
+HMAC_SECRET=...  # Secret used for validating HMAC-signed requests from Workspace
+X-CUSTOM-APIKEY=...  # Custom API key header (same as WS_API_KEY, used for secure communication)
 
-REFERENCE_FILTER=[]  # Optional list of references to filter incoming events (e.g., ["invoice", "contract"]) 
-PATH_BASE=/workspace/invoicedataextractor  # Base API path
-HOST_URL=...  # Public host URL
-VARIABLE_PREFIX=  # Prefix for embedded workflow variable names
+# Event filtering
+REFERENCE_FILTER=[]  # Optional list of references to filter incoming events (e.g., ["invoice", "contract"])
 
-#SEQ_SERVER_URL=http://localhost:5341/  # Optional SEQ log server
-LOG_LEVEL=ERROR  # Logging level
+# Route and host customization
+PATH_BASE=/workspace/aiintegration  # Base path prefix for all exposed endpoints
+HOST_URL=...  # Publicly accessible host URL (used in response and callback payloads)
+VARIABLE_PREFIX=  # Used if this integration is triggered by an embedded workflow with prefixed variable names
 
-SVC_NAME=WorkspaceInvoiceDataExtractionWindowsService  # Windows service name
-SVC_DISPLAY_NAME=Workspace Invoice Data Extraction Service  # Service display name
-SVC_DESCRIPTION=Workspace Invoice Data Extraction Service for Windows  # Service description
+# Optional logging configuration
+#SEQ_SERVER_URL=http://localhost:5341/  # Optional SEQ logging server URL (uncomment to enable)
+LOG_LEVEL=DEBUG  # Logging verbosity (DEBUG, INFO, WARNING, ERROR)
 
-APP_HOST=...  # Hostname or IP address for the service
-APP_PORT=...  # Listening port for the service
+# Windows service configuration
+SVC_NAME=WorkspaceAIIntegrationWindowsService  # Internal Windows service name
+SVC_DISPLAY_NAME=Workspace AI Integration Service  # Display name in the Services list
+SVC_DESCRIPTION=Workspace AI Integration Service for Windows  # Description of the Windows service
+
+# Application host settings
+APP_HOST=...  # DNS name of the server hosting the addon
+APP_PORT=...  # Port number for the integration service (ensure it's available)
 ```
 
-> **Important:** If the Invoice Data Extraction Addon and the Itiner Workspace application are installed on different servers, ensure that the firewall allows incoming connections on the port specified by `APP_PORT`. This is necessary for Workspace to successfully communicate with the addon.
+> **Important:** If the AI Integration Addon and the Itiner Workspace application are installed on different servers, ensure that the firewall allows incoming connections on the port specified by `APP_PORT`. This is necessary for Workspace to successfully communicate with the addon.
+
+Ensure all required values are correctly configured before proceeding to installation.
 
 ---
 
@@ -85,44 +123,45 @@ APP_PORT=...  # Listening port for the service
 
 ### 3.1 Installing the Service
 
-Open a Command Prompt as Administrator, navigate to the directory containing `wsinvoicedataextraction.exe`, and run:
+Open a Command Prompt as Administrator, navigate to the folder containing `wsaiintegration.exe`, and run:
 
 ```
-wsinvoicedataextraction.exe install
+wsaiintegration.exe install
 ```
 
-This will register the addon as a Windows Service.
+This command registers the addon as a Windows Service using the service name and display parameters defined in the `.env` file.
 
 ### 3.2 Starting the Service
 
-To start the service, execute:
+After successful installation, start the service with:
 
 ```
-wsinvoicedataextraction.exe start
+wsaiintegration.exe start
 ```
 
-The service will begin listening on the configured host and port.
+The AI Integration Addon will now run in the background as a Windows Service, listening on the configured host and port.
 
 ---
 
 ## 4. Logging
 
-By default, logs are written to standard output. SEQ integration is optional and can be enabled by configuring the `SEQ_SERVER_URL` in the `.env` file. Adjust the `LOG_LEVEL` as needed.
+By default, logs are written to a file or optionally to SEQ if configured. Logging level can be adjusted with the `LOG_LEVEL` parameter in the `.env` file.
 
 ---
 
-## 5. Updating the Invoice Data Extraction Addon
+## 5. Updating the AI Integration Addon
 
 1. **Stop** the service:
    ```
-   wsinvoicedataextraction.exe stop
+   wsaiintegration.exe stop
    ```
-2. Replace or update files as needed.
+2. Replace the executable or configuration files as needed.
 3. **Restart** the service:
    ```
-   wsinvoicedataextraction.exe start
+   wsaiintegration.exe start
    ```
 
 ---
 
-This guide provides the installation and configuration steps for the Invoice Data Extraction Addon for Itiner Workspace. For further support, contact your system administrator or the Itiner Workspace development team.
+This guide provides the installation and configuration steps for the AI Integration Addon for Itiner Workspace. For further support, contact your system administrator or the Itiner Workspace development team.
+
