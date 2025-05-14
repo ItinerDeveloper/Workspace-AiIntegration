@@ -10,6 +10,17 @@ It is triggered via a webhook set up within a workflow. The service then writes 
 ### Feature: Document Analysis  
 Users can send a document along with a prompt to the AI model to extract insights, generate summaries, or analyze its content. This feature is useful for tasks such as summarizing contract terms, identifying key points in reports, or extracting relevant details from legal documents.
 
+#### Supported File Types for OCR:
+- `.png`
+- `.jpeg`
+- `.jpg`
+- `.bmp`
+- `.tiff`
+- `.heif`
+
+> **Note:** PDF files are supported as well, **but** to indicate that a PDF should be processed via OCR, its filename must include an `ocr` substring.  
+> Example: `invoice_ocr.pdf`
+
 For example, a user can provide the following prompt:  
 > "Summarize the key obligations and responsibilities outlined in the attached contract."
 
