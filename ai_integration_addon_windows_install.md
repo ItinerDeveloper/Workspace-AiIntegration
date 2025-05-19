@@ -72,6 +72,7 @@ After deployment:
 ### 2.1 Environment Configuration (`.env`)
 
 Create or edit the `.env` file in the addon directory with the following structure:
+> 💡 For reference, see the `aiintegration_env_sample.env` file located in the GitHub repository.
 
 ```env
 # Azure OpenAI configuration (LLM)
